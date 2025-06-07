@@ -25,7 +25,7 @@ public class AttachmentController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] AttachmentCreateRequest request)
     {
-        var user = HttpContext.Items["User"] as User;
+        var user = HttpContext.Items["User"] as UserRequest;
 
         var created = await _service.CreateAsync(request, user.UserId);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
@@ -49,7 +49,7 @@ public class AttachmentController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] AttachmentUpdateRequest request)
     {
-        var user = HttpContext.Items["User"] as User;
+        var user = HttpContext.Items["User"] as UserRequest;
     
         var updated = await _service.UpdateAsync(id, request, user.UserId);
         if (!updated) return NotFound();

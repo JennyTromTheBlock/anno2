@@ -7,6 +7,8 @@ namespace Infrastructure.Contexts;
     public interface IDbContext
     {
         DbSet<Case> Cases { get; }
+        DbSet<Attachment> Attachments { get; }
+        DbSet<User> Users { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         DbConnection GetDbConnection();
     }

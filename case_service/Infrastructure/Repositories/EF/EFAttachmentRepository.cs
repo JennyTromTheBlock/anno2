@@ -8,9 +8,9 @@ namespace Infrastructure.Repositories.EF;
 
 public class AttachmentRepository : IAttachmentRepository
 {
-    private readonly AppDbContext _context;
+    private readonly IDbContext _context;
 
-    public AttachmentRepository(AppDbContext context)
+    public AttachmentRepository(IDbContext context)
     {
         _context = context;
     }

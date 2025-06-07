@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
-using Application.Domain.Entities;
+using Application.Domain.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Hosting;
 
@@ -18,7 +18,7 @@ public class AuthActionFilterAttribute : Attribute, IActionFilter
         if (env != null && env.IsDevelopment())
         {
             // Mock bruger i dev
-            context.HttpContext.Items["User"] = new User { UserId = 12 };
+            context.HttpContext.Items["User"] = new UserRequest { UserId = 12 };
             return;
         }
 
@@ -32,7 +32,7 @@ public class AuthActionFilterAttribute : Attribute, IActionFilter
             // For nu: mock med en hardcoded check
             if (bearerToken == "realToken")
             {
-                context.HttpContext.Items["User"] = new User { UserId = 123 };
+                context.HttpContext.Items["User"] = new UserRequest { UserId = 123 };
                 return;
             }
         }

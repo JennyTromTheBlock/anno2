@@ -12,6 +12,7 @@
         public bool IsActive { get; set; }
         
         public DateTime? DeletedAt { get; set; }
-
+        
+        public ICollection<UserOnCase> Users { get; set; } = new List<UserOnCase>();
     }
 }

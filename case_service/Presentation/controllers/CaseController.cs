@@ -23,7 +23,7 @@ public class CaseController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateCaseRequest newCase)
     {
-        var user = HttpContext.Items["User"] as User;
+        var user = HttpContext.Items["User"] as UserRequest;
 
         var created = await _service.CreateCaseAsync(newCase, user.UserId);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);

@@ -41,13 +41,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
 );
+builder.Services.AddScoped<IDbContext>(provider => provider.GetRequiredService<AppDbContext>());
+
 
 // Registrer repositories og services
 builder.Services.AddScoped<IAttachmentRepository, AttachmentRepository>();
 builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+
 // Dependency injection
-builder.Services.AddScoped<IDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 builder.Services.AddScoped<ICaseRepository, EFCaseRepository>();
 builder.Services.AddScoped<ICaseService, CaseService>();
 
