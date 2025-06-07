@@ -43,6 +43,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 builder.Services.AddScoped<IDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
+builder.Services.AddScoped<IUserOnCaseRepository, EFUserOnCaseRepository>();
+builder.Services.AddScoped<IUserOnCaseService, UserOnCaseService>();
 
 // Registrer repositories og services
 builder.Services.AddScoped<IAttachmentRepository, AttachmentRepository>();

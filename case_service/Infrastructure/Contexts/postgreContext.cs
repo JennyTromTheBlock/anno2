@@ -6,6 +6,7 @@ namespace Infrastructure.Contexts
 {
     public class AppDbContext : DbContext, IDbContext
     {
+        public DbSet<UserOnCase> UsersOnCase { get; set; }
         public DbSet<Case> Cases { get; set; }
         public DbSet<Attachment> Attachments { get; set; }
         public DbSet<User> Users { get; set; }

@@ -9,6 +9,7 @@ namespace Infrastructure.Contexts;
         DbSet<Case> Cases { get; }
         DbSet<Attachment> Attachments { get; }
         DbSet<User> Users { get; }
+        DbSet<UserOnCase> UsersOnCase { get; }
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         DbConnection GetDbConnection();
     }
