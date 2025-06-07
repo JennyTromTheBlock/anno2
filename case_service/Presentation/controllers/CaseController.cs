@@ -14,6 +14,7 @@ namespace Presentation.Controllers;
 public class CaseController : ControllerBase
 {
     private readonly ICaseService _service;
+    private readonly IUserOnCaseService _userOnCaseService;
 
     public CaseController(ICaseService service)
     {

@@ -1,5 +1,6 @@
 ﻿using Application.Domain.DTOs;
 using Application.Domain.Entities;
+using Application.Domain.Enums;
 using Application.Interfaces;
 using Application.Services.Interfaces;
 namespace Application.Services
@@ -7,10 +8,12 @@ namespace Application.Services
     public class CaseService : ICaseService
     {
         private readonly ICaseRepository _repo;
+        private readonly IUserOnCaseService _userOnCaseService;
 
-        public CaseService(ICaseRepository repo)
+        public CaseService(ICaseRepository repo, IUserOnCaseService userOnCaseService)
         {
             _repo = repo;
+            _userOnCaseService = userOnCaseService;
         }
         
         public async Task<Case> CreateCaseAsync(CreateCaseRequest request, int userId)
@@ -27,8 +30,14 @@ namespace Application.Services
                 DeletedAt = null
             };
 
-            return await _repo.CreateCaseAsync(newCase);
+            var createdCase = await _repo.CreateCaseAsync(newCase);
+
+            // Adds user to case
+            await _userOnCaseService.AddUserToCaseAsync(userId, createdCase.Id, 2);
+
+            return createdCase;
         }
+
 
         public Task<Case?> GetCaseByIdAsync(int id) => _repo.GetCaseByIdAsync(id);
 

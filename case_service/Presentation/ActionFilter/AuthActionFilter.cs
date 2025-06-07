@@ -18,7 +18,7 @@ public class AuthActionFilterAttribute : Attribute, IActionFilter
         if (env != null && env.IsDevelopment())
         {
             // Mock bruger i dev
-            context.HttpContext.Items["User"] = new UserRequest { UserId = 12 };
+            context.HttpContext.Items["User"] = new UserRequest { UserId = 2 };
             return;
         }
 

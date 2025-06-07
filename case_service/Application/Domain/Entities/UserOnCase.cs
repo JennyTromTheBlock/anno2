@@ -7,7 +7,5 @@ public class UserOnCase
     public int? RoleId { get; set; }
     public DateTime CreatedAt { get; set; }
 
-    public User? User { get; set; }
     public Role? Role { get; set; }
-    public Case? Case { get; set; } 
 }

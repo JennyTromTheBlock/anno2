@@ -87,17 +87,7 @@ namespace Infrastructure.Contexts
             
                 entity.Property(uoc => uoc.CreatedAt)
                       .HasDefaultValueSql("CURRENT_TIMESTAMP");
-            
-                entity.HasOne(uoc => uoc.User)
-                      .WithMany(u => u.Cases)
-                      .HasForeignKey(uoc => uoc.UserId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            
-                entity.HasOne(uoc => uoc.Case)
-                      .WithMany(c => c.Users)
-                      .HasForeignKey(uoc => uoc.CaseId)
-                      .OnDelete(DeleteBehavior.Cascade); // eller Restrict afhængigt af din strategi
-            
+    
                 entity.HasOne(uoc => uoc.Role)
                       .WithMany(r => r.UserRoles)
                       .HasForeignKey(uoc => uoc.RoleId)
