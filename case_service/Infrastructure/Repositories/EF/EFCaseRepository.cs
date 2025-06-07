@@ -5,11 +5,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repositories.EF
 {
-    public class CaseRepository : ICaseRepository
+    public class EFCaseRepository : ICaseRepository
     {
         private readonly IDbContext _context;
         
-        public CaseRepository(IDbContext context)
+        public EFCaseRepository(IDbContext context)
         {
             _context = context;
         }
@@ -44,16 +44,14 @@ namespace Infrastructure.Repositories.EF
             await _context.SaveChangesAsync();
             return true;
         }
-
         public async Task<bool> DeleteCaseAsync(int id)
         {
             var existing = await _context.Cases.FindAsync(id);
-            if (existing == null || existing.DeletedAt != null) return false;
+            if (existing == null || existing.DeletedAt != null)
+                return false;
 
-            existing.DeletedAt = DateTime.UtcNow;
-            existing.IsActive = false;
+            _context.Cases.Remove(existing);  // Soft delete via SaveChanges override
 
-            _context.Cases.Update(existing);
             await _context.SaveChangesAsync();
             return true;
         }
