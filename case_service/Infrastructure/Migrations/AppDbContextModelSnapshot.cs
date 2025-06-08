@@ -221,7 +221,7 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Application.Domain.Entities.UserOnCase", b =>
                 {
-                    b.HasOne("Application.Domain.Entities.Case", "Case")
+                    b.HasOne("Application.Domain.Entities.Case", null)
                         .WithMany("Users")
                         .HasForeignKey("CaseId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -232,17 +232,13 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Application.Domain.Entities.User", "User")
+                    b.HasOne("Application.Domain.Entities.User", null)
                         .WithMany("Cases")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Case");
-
                     b.Navigation("Role");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Application.Domain.Entities.Case", b =>

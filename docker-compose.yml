@@ -8,26 +8,60 @@ services:
     ports:
       - "8000:8000"
     environment:
-      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
-      POSTGRES_HOST: ${POSTGRES_HOST:-my_postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-your_db}
-      POSTGRES_USER: ${POSTGRES_USER:-your_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_pass}
+      ASPNETCORE_ENVIRONMENT: ${CASE_ASPNETCORE_ENVIRONMENT}
+      POSTGRES_HOST: ${CASE_POSTGRES_HOST}
+      POSTGRES_PORT: ${CASE_POSTGRES_PORT}
+      POSTGRES_DB: ${CASE_POSTGRES_DB}
+      POSTGRES_USER: ${CASE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CASE_POSTGRES_PASSWORD}
     depends_on:
-      - postgres
+      - case-postgres
 
-  postgres:
+  case-postgres:
     image: postgres:latest
-    container_name: my_postgres
+    container_name: case_db
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${CASE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CASE_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${CASE_POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
-      - ./dbdata:/var/lib/postgresql/data
+      - ./dbdata/case-data:/var/lib/postgresql/data
+  
+  pdf-service:
+    build:
+      context: ./pdf_service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${PDF_ASPNETCORE_ENVIRONMENT}
+      POSTGRES_HOST: ${PDF_POSTGRES_HOST}
+      POSTGRES_PORT: ${PDF_POSTGRES_PORT}
+      POSTGRES_DB: ${PDF_POSTGRES_DB}
+      POSTGRES_USER: ${PDF_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${PDF_POSTGRES_PASSWORD}
+    volumes:
+      - ./dbdata:/app/pdf_files
+    depends_on:
+      - pdf-postgres
+  
+  pdf-postgres:
+    image: postgres:latest
+    container_name: pdf_db1
+    restart: always
+    environment:
+      POSTGRES_USER: ${PDF_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${PDF_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${PDF_POSTGRES_DB}
+    ports:
+      - "5431:5432"
+    volumes:
+      - ./dbdata/pdf-data:/var/lib/postgresql/data
+
+
 
 volumes:
   dbdata:

@@ -1,5 +1,4 @@
 ﻿using System.Data.Common;
-using Application.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Contexts;

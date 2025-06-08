@@ -1,5 +1,4 @@
-﻿using Application.Domain.Entities;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
 
 namespace Infrastructure.Contexts
@@ -32,9 +31,7 @@ namespace Infrastructure.Contexts
                 entity.Property(p => p.CreatedAt)
                     .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                entity.Property(p => p.UpdatedAt)
-                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
+    
                 entity.Property(p => p.DeletedAt); // nullable datetime
 
                 entity.HasQueryFilter(p => p.DeletedAt == null);

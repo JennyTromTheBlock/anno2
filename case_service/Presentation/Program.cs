@@ -25,22 +25,20 @@ if (File.Exists("../../.env"))
 
 // ✅ Get PostgreSQL connection info from environment
 string host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "";
+string port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
 string database = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "";
 string user = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "";
 string password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "";
 
-string connectionString = $"Host={host};Database={database};Username={user};Password={password}";
+string connectionString = $"Host={host};Port={port};Database={database};Username={user};Password={password}";
+
+
 
 // ✅ Configure PostgreSQL with Npgsql
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString)
 );
 
-
-// ✅ Configure MySQL with Pomelo
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString))
-);
 builder.Services.AddScoped<IDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
 builder.Services.AddScoped<IUserOnCaseRepository, EFUserOnCaseRepository>();
