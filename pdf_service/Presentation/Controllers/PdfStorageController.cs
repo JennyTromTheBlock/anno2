@@ -7,42 +7,73 @@ using Microsoft.AspNetCore.Mvc;
 public class PdfStorageController : ControllerBase
 {
     private readonly IPdfStorageService _pdfStorageService;
+    private readonly IPdfFileInfoService _pdfFileInfoService;
 
-    public PdfStorageController(IPdfStorageService pdfStorageService)
+    public PdfStorageController(IPdfStorageService pdfStorageService, IPdfFileInfoService pdfFileInfoService)
     {
         _pdfStorageService = pdfStorageService;
+        _pdfFileInfoService = pdfFileInfoService;
     }
 
-    /// <summary>
-    /// Hent en enkelt PDF ud fra en relativ sti.
-    /// </summary>
-    /// <param name="relativePath">Den relative sti til PDF-filen</param>
-    [HttpGet("{*relativePath}")]
-    public async Task<IActionResult> GetPdf(string relativePath)
+    [HttpGet("{pdfId}")]
+    public async Task<IActionResult> GetPdf(int pdfId)
     {
         try
         {
-            var fileBytes = await _pdfStorageService.GetPdfAsync(relativePath);
-            return File(fileBytes, "application/pdf", Path.GetFileName(relativePath));
+            var pdfInfo = await _pdfFileInfoService.GetByIdAsync(pdfId);
+            if (pdfInfo == null)
+                return NotFound(new { message = "Ingen PDF-info fundet for ID'et." });
+
+            var pdfFile = await _pdfStorageService.GetPdfAsync(pdfInfo.Path);
+
+            return File(pdfFile, "application/pdf", $"{pdfInfo.FileName ?? "download"}.pdf");
         }
         catch (FileNotFoundException)
         {
-            return NotFound(new { message = "PDF ikke fundet" });
+            return NotFound(new { message = "PDF-fil ikke fundet." });
         }
     }
-
-    /// <summary>
-    /// Hent flere PDF-filer ud fra en liste af relative stier.
-    /// </summary>
-    /// <param name="paths">Liste af stier</param>
+    
+    
     [HttpPost("batch")]
-    public async Task<IActionResult> GetMultiplePdfs([FromBody] List<string> paths)
+    public async Task<IActionResult> GetMultiplePdfs([FromBody] List<int> idsToGet)
     {
-        var files = await _pdfStorageService.GetMultiplePdfsAsync(paths);
+        var pdfInfoList = await _pdfFileInfoService.GetByIdsAsync(idsToGet);
 
-        if (files.Count == 0)
-            return NotFound(new { message = "Ingen PDF-filer blev fundet." });
+        if (pdfInfoList == null || !pdfInfoList.Any())
+            return NotFound(new { message = "Ingen PDF-info fundet for de angivne ID'er." });
 
-        return Ok(files); // alternativ: returnér som base64 eller pak dem i ZIP
+        var result = new List<object>();
+
+        foreach (var pdfInfo in pdfInfoList)
+        {
+            if (string.IsNullOrWhiteSpace(pdfInfo.Path))
+                continue;
+
+            try
+            {
+                var pdfBytes = await _pdfStorageService.GetPdfAsync(pdfInfo.Path);
+
+                result.Add(new
+                {
+                    Id = pdfInfo.Id,
+                    FileName = pdfInfo.FileName,
+                    Path = pdfInfo.Path,
+                    CreatedAt = pdfInfo.CreatedAt,
+                    AuthorId = pdfInfo.AuthorId,
+                    FileContent = Convert.ToBase64String(pdfBytes)
+                });
+            }
+            catch (FileNotFoundException)
+            {
+                // valgfrit: log eller spring over
+            }
+        }
+
+        if (!result.Any())
+            return NotFound(new { message = "Ingen PDF-filer kunne hentes." });
+
+        return Ok(result);
     }
+
 }

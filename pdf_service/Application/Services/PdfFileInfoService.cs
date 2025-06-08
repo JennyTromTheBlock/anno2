@@ -18,6 +18,11 @@ public class PdfFileInfoService : IPdfFileInfoService
         return await _repository.GetByIdAsync(id);
     }
 
+    public async Task<List<PdfFile>> GetByIdsAsync(List<int> ids)
+    {
+        return await _repository.GetByIdsAsync(ids);
+    }
+
     public async Task<PdfFile> CreateAsync(PdfFileCreateDto dto, int userId,  string path)
     {
         // get meta data
