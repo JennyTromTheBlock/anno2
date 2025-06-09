@@ -44,7 +44,7 @@ public class PdfFileInfoService : IPdfFileInfoService
         };
         var createdFileInfo = await _repository.CreateAsync(pdfFile);
 
-        await HandleNewFilePublishAsync(createdFileInfo.FileName, createdFileInfo.Pages, createdFileInfo.AuthorId);
+        await HandleNewFileEventAsync(createdFileInfo.FileName, createdFileInfo.Pages, createdFileInfo.AuthorId);
         return createdFileInfo;
     }
 
@@ -56,6 +56,7 @@ public class PdfFileInfoService : IPdfFileInfoService
     public async Task SoftDeleteAsync(int id)
     {
         await _repository.SoftDeleteAsync(id);
+        await HandlePdfFileDeletedEventAsync(id);
     }
 
     private async Task<int> GetPageNumbersInPdf(IFormFile file)
@@ -69,10 +70,16 @@ public class PdfFileInfoService : IPdfFileInfoService
         return pageCount;
     }
     
-    public async Task HandleNewFilePublishAsync(string fileName, int pageCount, int authorId)
+    private async Task HandleNewFileEventAsync(string fileName, int pageCount, int authorId)
     {
         var fileCreatedEvent = new FileCreatedEvent(fileName, pageCount, authorId);
 
         await _eventPublisher.PublishAsync("file.created", fileCreatedEvent);
+    }   
+    
+    private async Task HandlePdfFileDeletedEventAsync(int id)
+    {
+        var fileCreatedEvent = new PdfFileDeletedEvent(id);
+        await _eventPublisher.PublishAsync("file.deleted", fileCreatedEvent);
     }
 }
