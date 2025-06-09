@@ -66,7 +66,7 @@ public class PdfStorageController : ControllerBase
             }
             catch (FileNotFoundException)
             {
-                // valgfrit: log eller spring over
+                Console.WriteLine("kunne ikke finde pdf");
             }
         }
 

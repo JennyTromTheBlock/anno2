@@ -12,25 +12,26 @@ public class PdfStorageRepository : IPdfStorageRepository
 
     public PdfStorageRepository(IHostEnvironment env)
     {
-        _pdfDirectory = Path.Combine(env.ContentRootPath, "dbdata/pdf_files");
+        _pdfDirectory = "/dbdata/pdfs";
         if (!Directory.Exists(_pdfDirectory))
             Directory.CreateDirectory(_pdfDirectory);
     }
 
     public async Task<string> SavePdfAsync(IFormFile file)
     {
+        Console.WriteLine(file.FileName);
         var fileName = $"{Guid.NewGuid()}.pdf";
         var filePath = Path.Combine(_pdfDirectory, fileName);
 
         await using var stream = new FileStream(filePath, FileMode.Create);
         await file.CopyToAsync(stream);
 
-        return Path.Combine("pdf_files", fileName); // returnér relative path
+        return fileName;
     }
 
     public async Task<byte[]> GetPdfAsync(string relativePath)
     {
-        var fullPath = Path.Combine(AppContext.BaseDirectory, relativePath);
+        var fullPath = Path.Combine(_pdfDirectory, relativePath);
 
         if (!File.Exists(fullPath))
             throw new FileNotFoundException("PDF ikke fundet", fullPath);
@@ -46,7 +47,7 @@ public class PdfStorageRepository : IPdfStorageRepository
         {
             try
             {
-                var fullPath = Path.Combine(AppContext.BaseDirectory, path);
+                var fullPath = Path.Combine(_pdfDirectory, path);
                 if (File.Exists(fullPath))
                 {
                     var content = await File.ReadAllBytesAsync(fullPath);

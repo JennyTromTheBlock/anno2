@@ -44,7 +44,7 @@ services:
       POSTGRES_USER: ${PDF_POSTGRES_USER}
       POSTGRES_PASSWORD: ${PDF_POSTGRES_PASSWORD}
     volumes:
-      - ./dbdata:/app/pdf_files
+      - ./dbdata:/dbdata
     depends_on:
       - pdf-postgres
   
