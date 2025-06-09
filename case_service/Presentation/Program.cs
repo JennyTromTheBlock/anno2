@@ -1,9 +1,17 @@
+using Application.Domain.Messages;
 using Application.Interfaces;
 using Application.Services;
 using Application.Services.Interfaces;
+using EasyNetQ;
 using Infrastructure.Contexts;
 using Infrastructure.Repositories.EF;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Presentation.Messages;
+using Presentation.Messages.options;
+
+;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,7 +67,26 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.Configure<RabbitMqOptions>(opts =>
+{
+    opts.Host = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
+    opts.User = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "guest";
+    opts.Pass = Environment.GetEnvironmentVariable("RABBITMQ_PASS") ?? "guest";
+});
+
+// Registrér IBus som singleton, afhængig af RabbitMqOptions 
+builder.Services.AddSingleton<IBus>(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
+    return RabbitHutch.CreateBus(options.ConnectionString);
+});
+
+// rabbitmq listeners
+builder.Services.AddHostedService<FileCreatedMessageHandler>();
+builder.Services.AddHostedService<FileDeletedMessageHandler>();
+
 var app = builder.Build();
+
 
 if (app.Environment.IsDevelopment())
 {

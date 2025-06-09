@@ -16,7 +16,6 @@ services:
       RABBITMQ_DEFAULT_USER: ${FILE_RABITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${FILE_RABITMQ_PASS}
       
-      
   case-service:
     build:
       context: ./case_service
@@ -71,9 +70,7 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-  
-  
-  
+    
   pdf-postgres:
     image: postgres:latest
     container_name: pdf_db1
@@ -86,8 +83,6 @@ services:
       - "5431:5432"
     volumes:
       - ./dbdata/pdf-data:/var/lib/postgresql/data
-
-
 
 volumes:
   dbdata:

@@ -1,20 +1,21 @@
-﻿using Application.Interfaces.Repositories;
+﻿using Application.Domain.Messages;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
-using Application.Messaging;
-using Application.Messaging.Events;
+using EasyNetQ;
 using Microsoft.AspNetCore.Http;
 using PdfSharpCore.Pdf.IO;
+using RabbitMQ.Client;
 
 namespace Application.Services;
 public class PdfFileInfoService : IPdfFileInfoService
 {
     private readonly IPdfFileInfoRepository _repository;
-    private readonly IEventPublisher _eventPublisher;
+    private readonly IBus _bus;
 
-    public PdfFileInfoService(IPdfFileInfoRepository repository, IEventPublisher eventPublisher)
+    public PdfFileInfoService(IPdfFileInfoRepository repository, IBus bus)
     {
         _repository = repository;
-        _eventPublisher = eventPublisher;
+        _bus = bus;
 
     }
 
@@ -37,6 +38,7 @@ public class PdfFileInfoService : IPdfFileInfoService
         var pdfFile = new PdfFile
         {
             FileName = dto.FileName,
+            AttId =dto.AttId,
             AuthorId = userId,
             Path = path,
             CreatedAt = DateTime.UtcNow,
@@ -44,7 +46,11 @@ public class PdfFileInfoService : IPdfFileInfoService
         };
         var createdFileInfo = await _repository.CreateAsync(pdfFile);
 
-        await HandleNewFileEventAsync(createdFileInfo.FileName, createdFileInfo.Pages, createdFileInfo.AuthorId);
+        //updates system with att if set by user
+        if (dto.AttId != 0)
+        {
+            await HandleNewFileEventAsync(createdFileInfo);
+        }
         return createdFileInfo;
     }
 
@@ -56,7 +62,7 @@ public class PdfFileInfoService : IPdfFileInfoService
     public async Task SoftDeleteAsync(int id)
     {
         await _repository.SoftDeleteAsync(id);
-        await HandlePdfFileDeletedEventAsync(id);
+        await HandleDeletedFileEvent(id);
     }
 
     private async Task<int> GetPageNumbersInPdf(IFormFile file)
@@ -70,16 +76,24 @@ public class PdfFileInfoService : IPdfFileInfoService
         return pageCount;
     }
     
-    private async Task HandleNewFileEventAsync(string fileName, int pageCount, int authorId)
+    private async Task HandleNewFileEventAsync(PdfFile file)
     {
-        var fileCreatedEvent = new FileCreatedEvent(fileName, pageCount, authorId);
-
-        await _eventPublisher.PublishAsync("file.created", fileCreatedEvent);
+        await _bus.PubSub.PublishAsync<FileCreatedMessage>(new FileCreatedMessage
+        {
+            Id = file.Id,
+            AttId = file.AttId,
+            AuthorId = file.AuthorId,
+            FileName = file.FileName,
+            CreatedAt = file.CreatedAt,
+            Pages = file.Pages,
+        });
     }   
     
-    private async Task HandlePdfFileDeletedEventAsync(int id)
+    private async Task HandleDeletedFileEvent(int fileId)
     {
-        var fileCreatedEvent = new PdfFileDeletedEvent(id);
-        await _eventPublisher.PublishAsync("file.deleted", fileCreatedEvent);
+        await _bus.PubSub.PublishAsync<FileDeletedMessage>(new FileDeletedMessage
+        {
+            Id = fileId,
+        });
     }
 }

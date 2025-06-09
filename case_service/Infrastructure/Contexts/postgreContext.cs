@@ -10,6 +10,9 @@ namespace Infrastructure.Contexts
         public DbSet<Case> Cases { get; set; }
         public DbSet<Attachment> Attachments { get; set; }
         public DbSet<User> Users { get; set; }
+        
+        public DbSet<PdfFileInfo> PdfFileInfos { get; set; }
+
 
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {}
 
@@ -92,6 +95,25 @@ namespace Infrastructure.Contexts
                       .WithMany(r => r.UserRoles)
                       .HasForeignKey(uoc => uoc.RoleId)
                       .OnDelete(DeleteBehavior.SetNull);
+            });
+            
+            modelBuilder.Entity<PdfFileInfo>(entity =>
+            {
+                entity.ToTable("pdf_file_info");
+
+                entity.HasKey(p => p.Id); // Unik Id fra anden microservice
+                entity.Property(p => p.Id).ValueGeneratedNever(); // Vi genererer IKKE ID her
+
+                entity.Property(p => p.FileName)
+                    .IsRequired()
+                    .HasMaxLength(255);
+
+                entity.Property(p => p.CreatedAt);
+
+                entity.HasOne(p => p.Attachment)
+                    .WithMany()
+                    .HasForeignKey(p => p.AttId)
+                    .OnDelete(DeleteBehavior.Restrict); // eller Cascade afhængigt af logik
             });
            
            modelBuilder.Entity<Role>().HasData(

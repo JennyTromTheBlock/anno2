@@ -1,12 +1,13 @@
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
-using Application.Messaging;
 using Application.Services;
+using EasyNetQ;
 using Infrastructure.Contexts;
-using Infrastructure.Messaging;
 using Infrastructure.Repositories;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Presentation.Messages.options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,17 +48,30 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
-// adds rabitmq
-builder.Services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
 
 // for storing files on disk
 builder.Services.AddScoped<IPdfStorageRepository, PdfStorageRepository>();
 builder.Services.AddScoped<IPdfStorageService, PdfStorageService>();
 
+
+builder.Services.Configure<RabbitMqOptions>(opts =>
+{
+    opts.Host = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
+    opts.User = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "guest";
+    opts.Pass = Environment.GetEnvironmentVariable("RABBITMQ_PASS") ?? "guest";
+});
+
 // for storing meta data for files in db 
 builder.Services.AddScoped<IPdfFileInfoRepository, PdfFileInfoRepository>();
 builder.Services.AddScoped<IPdfFileInfoService, PdfFileInfoService>();
 
+
+// Registrér IBus som singleton, afhængig af RabbitMqOptions 
+builder.Services.AddSingleton<IBus>(serviceProvider =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
+    return RabbitHutch.CreateBus(options.ConnectionString);
+});
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -65,13 +79,6 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Initialize RabbitMQ connection/channel before app starts handling requests
-var eventPublisher = app.Services.GetRequiredService<IEventPublisher>();
-
-if (eventPublisher is RabbitMqPublisher rabbitPublisher)
-{
-    await rabbitPublisher.InitializeAsync();
-}
 
 
 if (app.Environment.IsDevelopment())

@@ -10,6 +10,9 @@ namespace Infrastructure.Contexts;
         DbSet<Attachment> Attachments { get; }
         DbSet<User> Users { get; }
         DbSet<UserOnCase> UsersOnCase { get; }
+        
+        DbSet<PdfFileInfo> PdfFileInfos { get; set; }
+
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
         DbConnection GetDbConnection();
     }

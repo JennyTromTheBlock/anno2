@@ -10,5 +10,6 @@ public class PdfFileDto
 public class PdfFileCreateDto
 {
     public string FileName { get; set; } = string.Empty;
+    public int AttId { get; set; } = 0;
     public IFormFile File { get; set; } = default!;
 }
