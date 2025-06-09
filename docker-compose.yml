@@ -1,6 +1,22 @@
 ﻿version: '3.9'
 
 services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ${FILE_RABITMQ_HOSTNAME}
+    ports:
+      - "5672:5672"     # RabbitMQ broker port
+      - "15672:15672"   # Management UI
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      RABBITMQ_DEFAULT_USER: ${FILE_RABITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${FILE_RABITMQ_PASS}
+      
+      
   case-service:
     build:
       context: ./case_service
@@ -14,8 +30,12 @@ services:
       POSTGRES_DB: ${CASE_POSTGRES_DB}
       POSTGRES_USER: ${CASE_POSTGRES_USER}
       POSTGRES_PASSWORD: ${CASE_POSTGRES_PASSWORD}
+      RABBITMQ_HOST: ${FILE_RABITMQ_HOSTNAME}
+      RABBITMQ_USER: ${FILE_RABITMQ_USER}
+      RABBITMQ_PASS: ${FILE_RABITMQ_PASS}
     depends_on:
-      - case-postgres
+      rabbitmq:
+        condition: service_healthy
 
   case-postgres:
     image: postgres:latest
@@ -43,10 +63,16 @@ services:
       POSTGRES_DB: ${PDF_POSTGRES_DB}
       POSTGRES_USER: ${PDF_POSTGRES_USER}
       POSTGRES_PASSWORD: ${PDF_POSTGRES_PASSWORD}
+      RABBITMQ_HOST: ${FILE_RABITMQ_HOSTNAME}
+      RABBITMQ_USER: ${FILE_RABITMQ_USER}
+      RABBITMQ_PASS: ${FILE_RABITMQ_PASS}
     volumes:
       - ./dbdata:/dbdata
     depends_on:
-      - pdf-postgres
+      rabbitmq:
+        condition: service_healthy
+  
+  
   
   pdf-postgres:
     image: postgres:latest

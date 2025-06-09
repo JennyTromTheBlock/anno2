@@ -1,5 +1,7 @@
 ﻿using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
+using Application.Messaging;
+using Application.Messaging.Events;
 using Microsoft.AspNetCore.Http;
 using PdfSharpCore.Pdf.IO;
 
@@ -7,10 +9,13 @@ namespace Application.Services;
 public class PdfFileInfoService : IPdfFileInfoService
 {
     private readonly IPdfFileInfoRepository _repository;
+    private readonly IEventPublisher _eventPublisher;
 
-    public PdfFileInfoService(IPdfFileInfoRepository repository)
+    public PdfFileInfoService(IPdfFileInfoRepository repository, IEventPublisher eventPublisher)
     {
         _repository = repository;
+        _eventPublisher = eventPublisher;
+
     }
 
     public async Task<PdfFile?> GetByIdAsync(int id)
@@ -37,7 +42,10 @@ public class PdfFileInfoService : IPdfFileInfoService
             CreatedAt = DateTime.UtcNow,
             Pages = pageCount
         };
-        return await _repository.CreateAsync(pdfFile);
+        var createdFileInfo = await _repository.CreateAsync(pdfFile);
+
+        await HandleNewFilePublishAsync(createdFileInfo.FileName, createdFileInfo.Pages, createdFileInfo.AuthorId);
+        return createdFileInfo;
     }
 
     public async Task UpdateAsync(PdfFile pdfFile)
@@ -59,5 +67,12 @@ public class PdfFileInfoService : IPdfFileInfoService
         pageCount = document.PageCount;
 
         return pageCount;
+    }
+    
+    public async Task HandleNewFilePublishAsync(string fileName, int pageCount, int authorId)
+    {
+        var fileCreatedEvent = new FileCreatedEvent(fileName, pageCount, authorId);
+
+        await _eventPublisher.PublishAsync("file.created", fileCreatedEvent);
     }
 }

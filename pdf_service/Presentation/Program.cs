@@ -1,7 +1,9 @@
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
+using Application.Messaging;
 using Application.Services;
 using Infrastructure.Contexts;
+using Infrastructure.Messaging;
 using Infrastructure.Repositories;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +47,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IDbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
+// adds rabitmq
+builder.Services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
+
 // for storing files on disk
 builder.Services.AddScoped<IPdfStorageRepository, PdfStorageRepository>();
 builder.Services.AddScoped<IPdfStorageService, PdfStorageService>();
@@ -59,6 +64,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Initialize RabbitMQ connection/channel before app starts handling requests
+var eventPublisher = app.Services.GetRequiredService<IEventPublisher>();
+
+if (eventPublisher is RabbitMqPublisher rabbitPublisher)
+{
+    await rabbitPublisher.InitializeAsync();
+}
+
 
 if (app.Environment.IsDevelopment())
 {
