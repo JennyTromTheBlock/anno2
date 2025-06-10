@@ -1,5 +1,7 @@
 ﻿
 using Application.Domain.Messages;
+using Application.Domain.Entities;
+using Application.Services.Interfaces;
 using EasyNetQ;
 using Microsoft.Extensions.Options;
 using Presentation.Messages.options;
@@ -9,11 +11,13 @@ namespace Presentation.Messages;
 public class FileCreatedMessageHandler : BackgroundService, IMessageHandler<FileCreatedMessage>
 {
     private readonly IOptions<RabbitMqOptions> _options;
+    private readonly IServiceScopeFactory _scopeFactory;
     private IBus _bus;
 
-    public FileCreatedMessageHandler(IOptions<RabbitMqOptions> options) 
+    public FileCreatedMessageHandler(IOptions<RabbitMqOptions> options, IServiceScopeFactory scopeFactory)
     {
         _options = options;
+        _scopeFactory = scopeFactory;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -29,9 +33,21 @@ public class FileCreatedMessageHandler : BackgroundService, IMessageHandler<File
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 
-    public Task HandleAsync(FileCreatedMessage message, CancellationToken cancellationToken)
+    public async Task HandleAsync(FileCreatedMessage message, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"[FileCreated] Received: {message.FileName}");
-        return Task.CompletedTask;
+        using var scope = _scopeFactory.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IPdfFileInfoService>();
+
+        var file = new PdfFileInfo
+        {
+            Id = message.Id,
+            AttId = message.AttId,
+            AuthorId = message.AuthorId,
+            FileName = message.FileName,
+            CreatedAt = message.CreatedAt,
+            Pages = message.Pages,
+        };
+
+        await service.CreateAsync(file);
     }
 }

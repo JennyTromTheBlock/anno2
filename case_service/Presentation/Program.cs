@@ -63,6 +63,10 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICaseRepository, EFCaseRepository>();
 builder.Services.AddScoped<ICaseService, CaseService>();
 
+builder.Services.AddScoped<IPdfFileInfoRepository, PdfFileInfoRepository>();
+builder.Services.AddScoped<IPdfFileInfoService, PdfFileInfoService>();
+
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
