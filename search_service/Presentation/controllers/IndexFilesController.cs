@@ -9,12 +9,16 @@ namespace Presentation.Controllers
         public IndexFilesController()
         {
         }
-
-        [HttpPost]
-        public IActionResult IndexFile([FromBody] string filePath)
+        
+        [HttpPost("index")]
+        public async Task<IActionResult> IndexPdf(IFormFile file, [FromQuery] string documentId)
         {
-            // TODO: Call application service to index file
-            return Ok($"File at '{filePath}' indexed.");
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms);
+            var pdfBytes = ms.ToArray();
+
+            await _elasticService.IndexPdfAsync(pdfBytes, documentId);
+            return Ok("PDF indekseret");
         }
     }
 }
