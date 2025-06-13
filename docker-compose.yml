@@ -65,6 +65,7 @@ services:
       RABBITMQ_HOST: ${FILE_RABITMQ_HOSTNAME}
       RABBITMQ_USER: ${FILE_RABITMQ_USER}
       RABBITMQ_PASS: ${FILE_RABITMQ_PASS}
+      ELASTICSEARCH_URL: http://elasticsearch:9200
     volumes:
       - ./dbdata:/dbdata
     depends_on:
@@ -83,6 +84,26 @@ services:
       - "5431:5432"
     volumes:
       - ./dbdata/pdf-data:/var/lib/postgresql/data
+  
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+    ports:
+      - "9200:9200"   # REST API port
+      - "9300:9300"   # cluster communication port
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   dbdata:
+  esdata:
