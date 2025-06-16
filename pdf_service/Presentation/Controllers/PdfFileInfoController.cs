@@ -13,14 +13,12 @@ public class PdfFileInfoController : ControllerBase
 {
     private readonly IPdfFileInfoService _service;
     private readonly IPdfStorageService _pdfStorageService;
-    private readonly ElasticSearchService _searchService;
 
 
-    public PdfFileInfoController(IPdfFileInfoService service, IPdfStorageService pdfStorageService, ElasticSearchService searchService)
+    public PdfFileInfoController(IPdfFileInfoService service, IPdfStorageService pdfStorageService)
     {
         _service = service;
         _pdfStorageService = pdfStorageService;
-        _searchService = searchService;
     }
 
     [HttpGet("{id}")]
@@ -43,7 +41,7 @@ public class PdfFileInfoController : ControllerBase
 
         var file = await _pdfStorageService.GetPdfAsync(createdPdfFile.Path);
         // todo skal kører ocr først 
-        await _searchService.IndexPdfAsync(file, createdPdfFile.Id.ToString());
+        //await _searchService.IndexPdfAsync(file, createdPdfFile.Id.ToString());
 
         return CreatedAtAction(nameof(Get), new { id = createdPdfFile.Id }, createdPdfFile);
     }

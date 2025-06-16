@@ -1,11 +1,17 @@
-﻿namespace Application.Parsers;
+﻿using Application.Domains.DTOs;
+
+namespace Application.Parsers;
 
 using UglyToad.PdfPig;
 
-public static class PdfParser
+public static class CaseWithPosPdfParser
 {
+
     public static List<PdfWordEntry> Parse(byte[] pdfBytes, string documentId)
     {
+        if (pdfBytes == null || pdfBytes.Length == 0)
+            throw new ArgumentException("PDF-data er tom.", nameof(pdfBytes));
+
         var entries = new List<PdfWordEntry>();
 
         using var stream = new MemoryStream(pdfBytes);
@@ -36,4 +42,5 @@ public static class PdfParser
 
         return entries;
     }
+
 }

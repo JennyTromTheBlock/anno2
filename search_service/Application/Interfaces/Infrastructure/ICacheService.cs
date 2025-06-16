@@ -1,4 +1,5 @@
-﻿namespace DefaultNamespace;
+﻿
+namespace Application.Interfaces.Infrastructure;
 
 public interface ICacheService
 {

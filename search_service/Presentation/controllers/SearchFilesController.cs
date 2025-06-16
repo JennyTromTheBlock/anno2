@@ -1,22 +1,25 @@
-﻿namespace Presentation.Controllers;
+﻿using Application.Domains.DTOs;
+using Application.Interfaces.Services;
+
+namespace Presentation.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
 
-namespace Presentation.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class SearchFilesController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class SearchFilesController : ControllerBase
-    {
-        public SearchFilesController()
-        {
-        }
+    private readonly IElasticSearchService _elasticService;
 
-        [HttpGet]
-        public IActionResult Search([FromQuery] string query)
-        {
-            // TODO: Call application service to search files
-            return Ok($"Searched for '{query}'.");
-        }
+    // Inject ElasticSearch service i constructor
+    public SearchFilesController(IElasticSearchService elasticService)
+    {
+        _elasticService = elasticService;
+    }
+    [HttpGet]
+    public async Task<IActionResult> Search([FromQuery] CaseSearchQueryDto dto)
+    {
+        var results = await _elasticService.SearchAsync(dto.Query, dto.DocumentId.ToString());
+        return Ok(results);
     }
 }

@@ -77,22 +77,12 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton(sp =>
-{
-    var elasticUrl = builder.Configuration["ELASTICSEARCH_URL"];
-    return new ElasticSearchService(elasticUrl);
-});
-
-
 var app = builder.Build();
 
 
+app.UseSwagger();
+app.UseSwaggerUI();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 app.UseHttpsRedirection();
 

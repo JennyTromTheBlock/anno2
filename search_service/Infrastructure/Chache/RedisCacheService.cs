@@ -1,7 +1,8 @@
-﻿namespace DefaultNamespace;
-
-using Application.Interfaces;
+﻿
+using Application.Interfaces.Infrastructure;
 using StackExchange.Redis;
+
+namespace Infrastructure.Chache;
 
 public class RedisCacheService : ICacheService
 {

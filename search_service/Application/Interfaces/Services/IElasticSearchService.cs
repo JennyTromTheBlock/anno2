@@ -1,6 +1,6 @@
-﻿namespace DefaultNamespace;
+﻿using Application.Domains.DTOs;
 
-using Application.Parsers;
+namespace Application.Interfaces.Services;
 
 public interface IElasticSearchService
 {
