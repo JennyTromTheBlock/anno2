@@ -4,6 +4,7 @@ namespace Application.Interfaces.Services;
 
 public interface IElasticSearchService
 {
-    Task IndexPdfAsync(byte[] pdfBytes, string documentId);
-    Task<IEnumerable<PdfWordEntry>> SearchAsync(string word, string? documentId = null);
+    Task IndexPdfAsync(byte[] pdfBytes, string documentId, string? caseId = null, string? attachmentId = null, string? fileName = null);
+
+    Task<IEnumerable<PdfWord>> SearchWordPositionsAsync(CaseSearchQueryDto dto);
 }

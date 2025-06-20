@@ -16,10 +16,23 @@ public class SearchFilesController : ControllerBase
     {
         _elasticService = elasticService;
     }
-    [HttpGet]
+    
+    
+    [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] CaseSearchQueryDto dto)
     {
-        var results = await _elasticService.SearchAsync(dto.Query, dto.DocumentId.ToString());
-        return Ok(results);
+        try
+        {
+            var results = await _elasticService.SearchWordPositionsAsync(dto);
+            return Ok(results);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Fejl under søgning: {ex.Message}");
+        }
     }
 }

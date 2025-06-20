@@ -10,55 +10,84 @@ public class ElasticSearchService : IElasticSearchService
     public ElasticSearchService(string elasticUrl)
     {
         var settings = new ConnectionSettings(new Uri(elasticUrl))
-            .DefaultIndex("pdfwords");
+            .DefaultIndex("pdfwords1");
         _client = new ElasticClient(settings);
     }
 
-    private const int BatchSize = 5000; // todo skal være i config eller noget 
+    private const int IndexingBatchSize = 5000; // todo skal være i config eller noget 
 
-    public async Task IndexPdfAsync(byte[] pdfBytes, string documentId)
+    public async Task IndexPdfAsync(
+        byte[] pdfBytes,
+        string documentId,
+        string? caseId = null,
+        string? attachmentId = null,
+        string? fileName = null)
     {
-        var wordEntries = CaseWithPosPdfParser.Parse(pdfBytes, documentId);
+        var sentenceEntries = CaseWithPosPdfParser.Parse(pdfBytes, documentId, caseId, attachmentId, fileName);
 
-        if (wordEntries.Count == 0)
+        if (sentenceEntries.Count == 0)
         {
-            throw new InvalidOperationException("Ingen ord fundet i PDF-dokumentet.");
+            throw new InvalidOperationException("Ingen ord/sætninger fundet i PDF-dokumentet.");
         }
 
-
-        for (int i = 0; i < wordEntries.Count; i += BatchSize)
+        for (var i = 0; i < sentenceEntries.Count; i += IndexingBatchSize)
         {
-            var batch = wordEntries.Skip(i).Take(BatchSize);
+            var batch = sentenceEntries.Skip(i).Take(IndexingBatchSize);
 
-            var response = await _client.BulkAsync(b => b
-                .Index("pdfwords")
+            var bulkResponse = await _client.BulkAsync(b => b
+                .Index("pdfwords1")
                 .IndexMany(batch)
             );
 
-            if (response.Errors)
-            { 
-                throw new Exception("Fejl under bulk-indeksering: " + response.ServerError?.ToString());
-            }
+            if (!bulkResponse.Errors) continue;
+            var errors = string.Join("\n", bulkResponse.ItemsWithErrors.Select(e => $"Id: {e.Id}, Error: {e.Error.Reason}"));
+            throw new Exception("Fejl under bulk-indeksering: \n" + errors);
         }
     }
 
-
-
-    public async Task<IEnumerable<PdfWordEntry>> SearchAsync(string word, string? documentId = null)
+    
+    
+    public async Task<IEnumerable<PdfWord>> SearchWordPositionsAsync(CaseSearchQueryDto dto)
     {
-        var response = await _client.SearchAsync<PdfWordEntry>(s => s
-            .Index("pdfwords")
-            .Query(q =>
-            {
-                QueryContainer query = q.Match(m => m.Field(f => f.Word).Query(word));
-                if (!string.IsNullOrEmpty(documentId))
-                {
-                    query &= q.Term(t => t.Field(f => f.DocumentId).Value(documentId));
-                }
-                return query;
-            })
-            .Size(1000)
+        if (string.IsNullOrWhiteSpace(dto.Query))
+            throw new ArgumentException("searchTerm må ikke være tom", nameof(dto.Query));
+    
+        var response = await _client.SearchAsync<SentenceEntry>(s => s
+                .Index("pdfwords1")
+                .Size(1000) // antal hits der maks returneres
+                .Query(q => q
+                    .Nested(n => n
+                        .Path(p => p.Words)
+                        .Query(nq => nq
+                            .Match(m => m
+                                .Field(f => f.Words.First().Word) // match på ordet i Words-listen
+                                .Query(dto.Query)
+                                .Operator(Operator.And)
+                            )
+                        )
+                    )
+                )
+                .Source(sf => sf.Includes(i => i.Field(f => f.Words))) // kun words feltet returneres
         );
-        return response.Documents;
+
+        if (!response.IsValid)
+            throw new Exception("Elasticsearch query failed: " + response.DebugInformation);
+
+        var matchedWords = new List<PdfWord>();
+
+        foreach (var sentence in response.Documents)
+        {
+            // filtrer kun de ord der matcher søgningen
+            matchedWords.AddRange(
+                sentence.Words.Where(w => 
+                    w.Word != null && 
+                    w.Word.Equals(dto.Query, StringComparison.OrdinalIgnoreCase))
+            );
+        }
+
+        return matchedWords;
     }
+
+
+
 }

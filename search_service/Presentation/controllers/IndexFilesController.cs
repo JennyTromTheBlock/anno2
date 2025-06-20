@@ -14,9 +14,14 @@ namespace Presentation.Controllers
         {
             _elasticService = elasticService;
         }
-        
+
         [HttpPost("index")]
-        public async Task<IActionResult> IndexPdf(IFormFile file, [FromQuery] string documentId)
+        public async Task<IActionResult> IndexPdf(
+            IFormFile file,
+            [FromQuery] string documentId,
+            [FromQuery] string? caseId = null,
+            [FromQuery] string? attachmentId = null,
+            [FromQuery] string? fileName = null)
         {
             if (file == null || file.Length == 0)
             {
@@ -29,7 +34,7 @@ namespace Presentation.Controllers
                 await file.CopyToAsync(ms);
                 var pdfBytes = ms.ToArray();
 
-                await _elasticService.IndexPdfAsync(pdfBytes, documentId);
+                await _elasticService.IndexPdfAsync(pdfBytes, documentId, caseId, attachmentId, fileName);
                 return Ok("PDF indekseret.");
             }
             catch (ArgumentException ex)
@@ -45,6 +50,6 @@ namespace Presentation.Controllers
                 return StatusCode(500, $"Fejl under indeksering: {ex.Message}");
             }
         }
-
     }
+
 }

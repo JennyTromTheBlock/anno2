@@ -1,27 +1,44 @@
 ﻿namespace Application.Domains.DTOs;
 
-public class PdfWordEntry
+
+public class PdfWord
 {
-    public string DocumentId { get; set; }
-    public int Page { get; set; }
     public string Word { get; set; }
     public Position Position { get; set; }
 }
 
+public class SentenceEntry
+{
+    public string DocumentId { get; set; }
+    public int Page { get; set; }
+    public string Sentence { get; set; }
+    public List<PdfWord> Words { get; set; }
+    
+    public string? CaseId { get; set; }
+    public string? AttachmentId { get; set; }
+    public string? FileName { get; set; }
+}
+
 public class Position
 {
-    public float X { get; set; }
-    public float Y { get; set; }
-    public float Width { get; set; }
-    public float Height { get; set; }
+    public float X1 { get; set; }
+    public float X2 { get; set; }
+    public float Y1 { get; set; }
+    public float Y2 { get; set; }
 }
 
 
+
+// bruges til søgning
 public class CaseSearchQueryDto
 {
-    public string Query { get; set; } = string.Empty;
-    public int CaseId { get; set; }
-    public int DocumentId { get; set; }
+    public string? Query { get; set; }
+    public string? DocumentId { get; set; }
+    public string CaseId { get; set; }                     
+    public string? AttachmentId { get; set; }           
     public bool PartialMatch { get; set; } = false;
     public bool? Fuzzy { get; set; } = false;
+    public int batchSize { get; set; } = 1000;
 }
+
+

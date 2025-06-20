@@ -1,46 +1,68 @@
 ﻿using Application.Domains.DTOs;
-
-namespace Application.Parsers;
-
 using UglyToad.PdfPig;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
-public static class CaseWithPosPdfParser
+namespace Application.Parsers
 {
-
-    public static List<PdfWordEntry> Parse(byte[] pdfBytes, string documentId)
+    public static class CaseWithPosPdfParser
     {
-        if (pdfBytes == null || pdfBytes.Length == 0)
-            throw new ArgumentException("PDF-data er tom.", nameof(pdfBytes));
-
-        var entries = new List<PdfWordEntry>();
-
-        using var stream = new MemoryStream(pdfBytes);
-        using var document = PdfDocument.Open(stream);
-
-        foreach (var page in document.GetPages())
+        public static List<SentenceEntry> Parse(
+            byte[] pdfBytes,
+            string documentId,
+            string? caseId = null,
+            string? attachmentId = null,
+            string? fileName = null)
         {
-            var pageNumber = page.Number;
+            var entries = new List<SentenceEntry>();
 
-            foreach (var word in page.GetWords())
+            using var stream = new MemoryStream(pdfBytes);
+            using var document = PdfDocument.Open(stream);
+
+            foreach (var page in document.GetPages())
             {
-                var bounds = word.BoundingBox;
-                entries.Add(new PdfWordEntry
+                // Grupper ord på samme linje baseret på Top (med lidt tolerance)
+                var lines = page.GetWords()
+                    .GroupBy(w => Math.Round(w.BoundingBox.Top, 1))
+                    .OrderBy(g => g.Key);
+
+                foreach (var lineGroup in lines)
                 {
-                    DocumentId = documentId,
-                    Page = pageNumber,
-                    Word = word.Text,
-                    Position = new Position
+                    var sortedWords = lineGroup.OrderBy(w => w.BoundingBox.Left).ToList();
+
+                    var sentenceText = string.Join(" ", sortedWords.Select(w => w.Text));
+
+                    // Lav PdfWord-listen med ord og positioner
+                    var wordObjects = sortedWords.Select(w => new PdfWord
                     {
-                        X = (float)bounds.Left,
-                        Y = (float)bounds.Top,
-                        Width = (float)bounds.Width,
-                        Height = (float)bounds.Height
-                    }
-                });
+                        Word = w.Text,
+                        Position = new Position
+                        {
+                            X1 = (float)w.BoundingBox.Left,
+                            X2 = (float)w.BoundingBox.Right,
+                            Y1 = (float)w.BoundingBox.Top,
+                            Y2 = (float)w.BoundingBox.Bottom
+                        }
+                    }).ToList();
+
+                    // Lav SentenceEntry med nested words
+                    entries.Add(new SentenceEntry
+                    {
+                        DocumentId = documentId,
+                        Page = page.Number,
+                        Sentence = sentenceText,
+                        Words = wordObjects,
+                        CaseId = caseId,
+                        AttachmentId = attachmentId,
+                        FileName = fileName
+                    });
+                }
             }
+
+            return entries;
         }
-
-        return entries;
     }
-
 }
+
+
