@@ -1,4 +1,6 @@
 using Application.Interfaces.Services;
+using DefaultNamespace;
+using Nest;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,14 +26,32 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddSingleton<IElasticSearchService>(sp =>
+
+
+builder.Services.AddSingleton<IElasticClient>(sp =>
 {
     var configuration = sp.GetRequiredService<IConfiguration>();
-    var elasticUrl = configuration["ELASTICSEARCH_URL"];
-    return new ElasticSearchService(elasticUrl!);
+    var elasticUrl = configuration["ELASTICSEARCH_URL"]!;
+    
+    var settings = new ConnectionSettings(new Uri(elasticUrl))
+        .DefaultIndex("default-index"); // evt. standardindex
+
+    return new ElasticClient(settings);
 });
 
+builder.Services.AddSingleton<ElasticIndexManager>();
 
+// ElasticIndexManager og service
+builder.Services.AddSingleton<IElasticSearchService>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var elasticUrl = config["ELASTICSEARCH_URL"] ?? throw new InvalidOperationException("Missing ELASTICSEARCH_URL");
+    
+    var client = sp.GetRequiredService<IElasticClient>();
+    var indexManager = sp.GetRequiredService<ElasticIndexManager>();
+
+    return new ElasticSearchService(elasticUrl, indexManager);
+});
 
 var app = builder.Build();
 

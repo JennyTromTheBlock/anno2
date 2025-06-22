@@ -35,4 +35,20 @@ public class SearchFilesController : ControllerBase
             return StatusCode(500, $"Fejl under søgning: {ex.Message}");
         }
     }
+
+    [HttpPost("init")]
+    public async Task<IActionResult> initElasticShemes()
+    {
+        try
+        {
+            await _elasticService.InitElasticSearch();
+            return Ok();
+        }
+        catch (Exception e)
+        {
+            return StatusCode(500, $"Fejl under søgning: {e.Message}");
+
+        }
+        
+    }
 }

@@ -38,7 +38,6 @@ public class ElasticIndexManager
         }
     }
 
-    // ✅ Denne laver alle indeks fra enum'en
     public async Task CreateAllIndicesAsync()
     {
         foreach (var kv in ElasticIndexDefinitions.Definitions)
@@ -54,6 +53,24 @@ public class ElasticIndexManager
                 // Tilføj flere case-blocks her hvis du har flere typer
                 default:
                     throw new InvalidOperationException($"Ukendt definitionstype for index {kv.Key}");
+            }
+        }
+    }
+    
+    
+    public async Task DeleteAllIndicesAsync()
+    {
+        foreach (var kv in ElasticIndexDefinitions.Definitions)
+        {
+            var indexName = kv.Key.ToString().ToLowerInvariant(); // eksempelvis: "pdfwords"
+
+            var exists = await _client.Indices.ExistsAsync(indexName);
+            if (!exists.Exists) continue;
+            
+            var deleteResponse = await _client.Indices.DeleteAsync(indexName);
+            if (!deleteResponse.IsValid)
+            {
+                throw new Exception($"Fejl ved sletning af index {indexName}: {deleteResponse.ServerError?.Error.Reason}");
             }
         }
     }

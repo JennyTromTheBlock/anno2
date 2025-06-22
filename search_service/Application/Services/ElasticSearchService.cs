@@ -1,20 +1,26 @@
 ﻿using Application.Domains.DTOs;
 using Application.Interfaces.Services;
 using Application.Parsers;
+using DefaultNamespace;
 using Nest;
 
 public class ElasticSearchService : IElasticSearchService
 {
     private readonly IElasticClient _client;
+    private readonly ElasticIndexManager _elasticManager;
+    
+    private const int IndexingBatchSize = 5000; // todo skal være i config eller noget 
 
-    public ElasticSearchService(string elasticUrl)
+
+    public ElasticSearchService(string elasticUrl, ElasticIndexManager elasticManager)
     {
         var settings = new ConnectionSettings(new Uri(elasticUrl))
-            .DefaultIndex("pdfwords1");
+            .DefaultIndex("pdfwords");
+        
         _client = new ElasticClient(settings);
+        _elasticManager = elasticManager;
     }
 
-    private const int IndexingBatchSize = 5000; // todo skal være i config eller noget 
 
     public async Task IndexPdfAsync(
         byte[] pdfBytes,
@@ -35,7 +41,7 @@ public class ElasticSearchService : IElasticSearchService
             var batch = sentenceEntries.Skip(i).Take(IndexingBatchSize);
 
             var bulkResponse = await _client.BulkAsync(b => b
-                .Index("pdfwords1")
+                .Index("pdfwords")
                 .IndexMany(batch)
             );
 
@@ -53,7 +59,7 @@ public class ElasticSearchService : IElasticSearchService
             throw new ArgumentException("searchTerm må ikke være tom", nameof(dto.Query));
     
         var response = await _client.SearchAsync<SentenceEntry>(s => s
-                .Index("pdfwords1")
+                .Index("pdfwords")
                 .Size(1000) // antal hits der maks returneres
                 .Query(q => q
                     .Nested(n => n
@@ -87,7 +93,12 @@ public class ElasticSearchService : IElasticSearchService
 
         return matchedWords;
     }
-
-
-
+    
+    //re inits all indexes i elastic container
+    //skal ikke kunne gøres i live miljø uden admin tilgang
+    public async Task InitElasticSearch()
+    {
+        await _elasticManager.DeleteAllIndicesAsync();
+        await _elasticManager.CreateAllIndicesAsync();
+    }
 }
