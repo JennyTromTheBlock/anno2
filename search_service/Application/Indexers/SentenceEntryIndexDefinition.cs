@@ -1,6 +1,5 @@
 ﻿using Application.Domains.DTOs;
 using Application.Interfaces;
-using Nest;
 
 namespace Application.Indexers;
 

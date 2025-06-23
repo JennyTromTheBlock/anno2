@@ -28,6 +28,15 @@ public class Position
 }
 
 
+public class PdfWithWordsReturnDto
+{
+    public string DocumentId { get; set; }
+    public string Sentence { get; set; }
+    public int Page { get; set; }
+    public List<PdfWord> Words { get; set; }
+}
+
+
 
 // bruges til søgning
 public class CaseSearchQueryDto

@@ -1,8 +1,11 @@
 ﻿using Application.Domains.DTOs;
+using Application.Domains.Enums;
+using Application.Indexers;
 using Application.Interfaces.Services;
 using Application.Parsers;
-using DefaultNamespace;
 using Nest;
+
+namespace Application.Services;
 
 public class ElasticSearchService : IElasticSearchService
 {
@@ -12,12 +15,10 @@ public class ElasticSearchService : IElasticSearchService
     private const int IndexingBatchSize = 5000; // todo skal være i config eller noget 
 
 
-    public ElasticSearchService(string elasticUrl, ElasticIndexManager elasticManager)
+    public ElasticSearchService(IElasticClient client, ElasticIndexManager elasticManager)
     {
-        var settings = new ConnectionSettings(new Uri(elasticUrl))
-            .DefaultIndex("pdfwords");
-        
-        _client = new ElasticClient(settings);
+
+        _client = client;
         _elasticManager = elasticManager;
     }
 
@@ -41,7 +42,7 @@ public class ElasticSearchService : IElasticSearchService
             var batch = sentenceEntries.Skip(i).Take(IndexingBatchSize);
 
             var bulkResponse = await _client.BulkAsync(b => b
-                .Index("pdfwords")
+                .Index(ElasticIndex.PdfWords.ToString().ToLower())
                 .IndexMany(batch)
             );
 
@@ -51,15 +52,14 @@ public class ElasticSearchService : IElasticSearchService
         }
     }
 
-    
-    
+
     public async Task<IEnumerable<PdfWord>> SearchWordPositionsAsync(CaseSearchQueryDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Query))
             throw new ArgumentException("searchTerm må ikke være tom", nameof(dto.Query));
     
         var response = await _client.SearchAsync<SentenceEntry>(s => s
-                .Index("pdfwords")
+                .Index(ElasticIndex.PdfWords.ToString().ToLower())
                 .Size(1000) // antal hits der maks returneres
                 .Query(q => q
                     .Nested(n => n
@@ -93,6 +93,78 @@ public class ElasticSearchService : IElasticSearchService
 
         return matchedWords;
     }
+    
+    
+    public async Task<IEnumerable<PdfWithWordsReturnDto>> GetPdfWithWordsAsync(CaseSearchQueryDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Query))
+            throw new ArgumentException("Query må ikke være tom.", nameof(dto.Query));
+
+        var searchTerms = dto.Query
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        var response = await _client.SearchAsync<SentenceEntry>(s => s
+            .Index(ElasticIndex.PdfWords.ToString().ToLower())
+            .Size(dto.batchSize > 0 ? dto.batchSize : 1000)
+            .Query(q => q
+                .Bool(b => b
+                    .Must(searchTerms.Select(term => 
+                        (Func<QueryContainerDescriptor<SentenceEntry>, QueryContainer>)(q => 
+                            q.Nested(n => n
+                                .Path(p => p.Words)
+                                .Query(nq => nq
+                                    .Match(m => m
+                                        .Field("words.word")
+                                        .Query(term)
+                                        .Operator(Operator.And)
+                                        .Fuzziness(dto.Fuzzy == true ? Fuzziness.Auto : null)
+                                    )
+                                )
+                            )
+                        )
+                    ).ToArray())
+                    .Filter(f => 
+                    {
+                        QueryContainer container = null;
+
+                        if (!string.IsNullOrWhiteSpace(dto.DocumentId))
+                            container &= f.Term("documentId", dto.DocumentId);
+
+                        if (!string.IsNullOrWhiteSpace(dto.CaseId))
+                            container &= f.Term("caseId", dto.CaseId);
+
+                        if (!string.IsNullOrWhiteSpace(dto.AttachmentId))
+                            container &= f.Term("attachmentId", dto.AttachmentId);
+
+                        return container;
+                    })
+                )
+            )
+            .Source(sf => sf
+                .Includes(i => i
+                    .Fields(
+                        f => f.DocumentId,
+                        f => f.Sentence,
+                        f => f.Page,
+                        f => f.Words
+                    )
+                )
+            )
+        );
+        Console.WriteLine("heey");
+        Console.WriteLine(response.Documents.Count);
+
+        if (!response.IsValid)
+            throw new Exception("Elasticsearch query failed: " + response.DebugInformation);
+
+        return (from sentence in response.Documents
+            let matchingWords = sentence.Words.Where(w => searchTerms.Contains(w.Word, StringComparer.OrdinalIgnoreCase))
+                .ToList()
+            where matchingWords.Count == searchTerms.Count
+            select new PdfWithWordsReturnDto { DocumentId = sentence.DocumentId, Sentence = sentence.Sentence, Page = sentence.Page, Words = matchingWords }).ToList();
+    }
+
     
     //re inits all indexes i elastic container
     //skal ikke kunne gøres i live miljø uden admin tilgang

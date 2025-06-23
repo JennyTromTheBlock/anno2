@@ -34,6 +34,23 @@ public class SearchFilesController : ControllerBase
         {
             return StatusCode(500, $"Fejl under søgning: {ex.Message}");
         }
+    }    
+    [HttpGet("searchWord")]
+    public async Task<IActionResult> SearchWord([FromQuery] CaseSearchQueryDto dto)
+    {
+        try
+        {
+            var results = await _elasticService.GetPdfWithWordsAsync(dto);
+            return Ok(results);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Fejl under søgning: {ex.Message}");
+        }
     }
 
     [HttpPost("init")]

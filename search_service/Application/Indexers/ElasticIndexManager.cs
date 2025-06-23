@@ -1,15 +1,9 @@
 ﻿using Application.Domains.DTOs;
 using Application.Domains.Enums;
 using Application.Interfaces;
-
-namespace DefaultNamespace;
-
 using Nest;
-using System;
-using System.Threading.Tasks;
 
-using System;
-using System.Threading.Tasks;
+namespace Application.Indexers;
 
 public class ElasticIndexManager
 {
@@ -20,7 +14,7 @@ public class ElasticIndexManager
         _client = client;
     }
 
-    public async Task CreateIndexAsync<T>(string indexName, IElasticIndexDefinition<T> definition) where T : class
+    private async Task CreateIndexAsync<T>(string indexName, IElasticIndexDefinition<T> definition) where T : class
     {
         var exists = await _client.Indices.ExistsAsync(indexName);
         if (exists.Exists)
@@ -42,7 +36,7 @@ public class ElasticIndexManager
     {
         foreach (var kv in ElasticIndexDefinitions.Definitions)
         {
-            var indexName = kv.Key.ToString().ToLowerInvariant(); // eksempelvis: "pdfwords"
+            var indexName = kv.Key.ToString().ToLowerInvariant();
 
             switch (kv.Value)
             {
@@ -57,13 +51,10 @@ public class ElasticIndexManager
         }
     }
     
-    
     public async Task DeleteAllIndicesAsync()
     {
-        foreach (var kv in ElasticIndexDefinitions.Definitions)
+        foreach (var indexName in ElasticIndexDefinitions.Definitions.Select(kv => kv.Key.ToString().ToLowerInvariant()))
         {
-            var indexName = kv.Key.ToString().ToLowerInvariant(); // eksempelvis: "pdfwords"
-
             var exists = await _client.Indices.ExistsAsync(indexName);
             if (!exists.Exists) continue;
             
