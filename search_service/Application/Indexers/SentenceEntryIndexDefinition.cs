@@ -18,7 +18,14 @@ public class SentenceEntryIndexDefinition : IElasticIndexDefinition<SentenceEntr
             .Nested<PdfWord>(n => n
                 .Name(nn => nn.Words)
                 .Properties(np => np
-                    .Keyword(k => k.Name(w => w.Word))
+                    .Text(t => t
+                        .Name(w => w.Word)
+                        .Fields(f => f
+                            .Keyword(k => k
+                                .Name("raw")
+                            )
+                        )
+                    )
                     .Object<Position>(o => o
                         .Name(po => po.Position)
                         .Properties(pp => pp

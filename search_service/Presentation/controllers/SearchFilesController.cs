@@ -66,6 +66,5 @@ public class SearchFilesController : ControllerBase
             return StatusCode(500, $"Fejl under søgning: {e.Message}");
 
         }
-        
     }
 }

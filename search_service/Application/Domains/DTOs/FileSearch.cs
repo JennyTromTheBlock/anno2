@@ -48,6 +48,8 @@ public class CaseSearchQueryDto
     public bool PartialMatch { get; set; } = false;
     public bool? Fuzzy { get; set; } = false;
     public int batchSize { get; set; } = 1000;
+    
+    public int? Slop { get; set; }
 }
 
 
