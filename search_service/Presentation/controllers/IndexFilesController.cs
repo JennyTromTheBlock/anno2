@@ -50,6 +50,31 @@ namespace Presentation.Controllers
                 return StatusCode(500, $"Fejl under indeksering: {ex.Message}");
             }
         }
+        
+        
+        [HttpDelete("delete-by-case/{caseId}")]
+        public async Task<ActionResult<bool>> DeleteByCaseId(string caseId)
+        {
+            var success = await _elasticService.DeleteByCaseIdAsync(caseId);
+            return Ok(success);
+        }
+
+        [HttpDelete("delete-by-attachment/{attachmentId}")]
+        public async Task<ActionResult<bool>> DeleteByAttachmentId(string attachmentId)
+        {
+            var success = await _elasticService.DeleteByAttachmentIdAsync(attachmentId);
+            return Ok(success);
+        }
+
+        [HttpDelete("delete-by-document/{documentId}")]
+        public async Task<ActionResult<bool>> DeleteByDocumentId(string documentId)
+        {
+            var success = await _elasticService.DeleteByDocumentIdAsync(documentId);
+            return Ok(success);
+        }
+
+        
     }
+    
 
 }

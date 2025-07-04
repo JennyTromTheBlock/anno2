@@ -14,7 +14,15 @@ public class SentenceEntryIndexDefinition : IElasticIndexDefinition<SentenceEntr
             .Number(nu => nu.Name(n => n.Page).Type(NumberType.Integer))
             .Keyword(k => k.Name(n => n.CaseId))
             .Keyword(k => k.Name(n => n.AttachmentId))
-            .Text(t => t.Name(n => n.Sentence))
+            .Text(t => t
+                .Name(n => n.Sentence)
+                .Fields(f => f
+                    .Text(tt => tt
+                            .Name("fuzzy")
+                            .Analyzer("standard") // Eller anden analyzer efter behov
+                    )
+                )
+            )
             .Nested<PdfWord>(n => n
                 .Name(nn => nn.Words)
                 .Properties(np => np

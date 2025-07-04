@@ -18,24 +18,8 @@ public class SearchFilesController : ControllerBase
     }
     
     
+   
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] CaseSearchQueryDto dto)
-    {
-        try
-        {
-            var results = await _elasticService.SearchWordPositionsAsync(dto);
-            return Ok(results);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Fejl under søgning: {ex.Message}");
-        }
-    }    
-    [HttpGet("searchWord")]
     public async Task<IActionResult> SearchWord([FromQuery] CaseSearchQueryDto dto)
     {
         try

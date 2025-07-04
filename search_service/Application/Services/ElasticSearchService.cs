@@ -51,48 +51,6 @@ public class ElasticSearchService : IElasticSearchService
             throw new Exception("Fejl under bulk-indeksering: \n" + errors);
         }
     }
-
-
-    public async Task<IEnumerable<PdfWord>> SearchWordPositionsAsync(CaseSearchQueryDto dto)
-    {
-        if (string.IsNullOrWhiteSpace(dto.Query))
-            throw new ArgumentException("searchTerm må ikke være tom", nameof(dto.Query));
-    
-        var response = await _client.SearchAsync<SentenceEntry>(s => s
-                .Index(ElasticIndex.PdfWords.ToString().ToLower())
-                .Size(1000) // antal hits der maks returneres
-                .Query(q => q
-                    .Nested(n => n
-                        .Path(p => p.Words)
-                        .Query(nq => nq
-                            .Match(m => m
-                                .Field(f => f.Words.First().Word) // match på ordet i Words-listen
-                                .Query(dto.Query)
-                                .Operator(Operator.And)
-                            )
-                        )
-                    )
-                )
-                .Source(sf => sf.Includes(i => i.Field(f => f.Words))) // kun words feltet returneres
-        );
-
-        if (!response.IsValid)
-            throw new Exception("Elasticsearch query failed: " + response.DebugInformation);
-
-        var matchedWords = new List<PdfWord>();
-
-        foreach (var sentence in response.Documents)
-        {
-            // filtrer kun de ord der matcher søgningen
-            matchedWords.AddRange(
-                sentence.Words.Where(w => 
-                    w.Word != null && 
-                    w.Word.Equals(dto.Query, StringComparison.OrdinalIgnoreCase))
-            );
-        }
-
-        return matchedWords;
-    }
     
     
 public async Task<IEnumerable<PdfWithWordsReturnDto>> GetPdfWithWordsAsync(CaseSearchQueryDto dto)
@@ -104,7 +62,7 @@ public async Task<IEnumerable<PdfWithWordsReturnDto>> GetPdfWithWordsAsync(CaseS
         .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         .ToList();
 
-    var useSlop = dto.Slop.HasValue && searchTerms.Count > 1;
+    var useSlop = dto.Fuzzy == true && dto.Slop.HasValue && searchTerms.Count > 1;
 
     var response = await _client.SearchAsync<SentenceEntry>(s => s
         .Index(ElasticIndex.PdfWords.ToString().ToLower())
@@ -114,9 +72,9 @@ public async Task<IEnumerable<PdfWithWordsReturnDto>> GetPdfWithWordsAsync(CaseS
                 .Must(useSlop
                     ? new Func<QueryContainerDescriptor<SentenceEntry>, QueryContainer>[] {
                         q => q.MatchPhrase(mp => mp
-                            .Field(f => f.Sentence)
+                            .Field("sentence.fuzzy")
                             .Query(dto.Query)
-                            .Slop(dto.Slop)
+                            .Slop(dto.Slop.Value)
                         )
                     }
                     : searchTerms.Select(term =>
@@ -161,7 +119,7 @@ public async Task<IEnumerable<PdfWithWordsReturnDto>> GetPdfWithWordsAsync(CaseS
         )
         .Highlight(h => h
             .Fields(hf => hf
-                .Field(useSlop ? "sentence" : "words.word")
+                .Field(useSlop ? "sentence.fuzzy" : "words.word")
                 .PreTags("<hit>")
                 .PostTags("</hit>")
             )
@@ -172,19 +130,18 @@ public async Task<IEnumerable<PdfWithWordsReturnDto>> GetPdfWithWordsAsync(CaseS
         throw new Exception("Elasticsearch query failed: " + response.DebugInformation);
 
     var results = new List<PdfWithWordsReturnDto>();
-
     foreach (var hit in response.Hits)
     {
         var sentence = hit.Source;
         var matchedWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (useSlop && hit.Highlight.TryGetValue("sentence", out var sentenceHighlights))
+        if (useSlop && hit.Highlight.TryGetValue("sentence.fuzzy", out var sentenceHighlights))
         {
             foreach (var fragment in sentenceHighlights)
             {
                 var matches = System.Text.RegularExpressions.Regex.Matches(fragment, "<hit>(.*?)</hit>");
                 foreach (System.Text.RegularExpressions.Match match in matches)
-                    matchedWords.UnionWith(match.Groups[1].Value.Split(' ')); // evt. flere ord
+                    matchedWords.UnionWith(match.Groups[1].Value.Split(' '));
             }
         }
         else if (hit.Highlight.TryGetValue("words.word", out var wordHighlights))
@@ -209,11 +166,66 @@ public async Task<IEnumerable<PdfWithWordsReturnDto>> GetPdfWithWordsAsync(CaseS
             Words = filteredWords
         });
     }
-
     return results;
 }
 
 
+public async Task<bool> DeleteByDocumentIdAsync(string documentId)
+{
+    if (string.IsNullOrWhiteSpace(documentId))
+        throw new ArgumentException("DocumentId må ikke være tomt.", nameof(documentId));
+
+    var response = await _client.DeleteByQueryAsync<SentenceEntry>(d => d
+        .Index(ElasticIndex.PdfWords.ToString().ToLower())
+        .Query(q => q
+            .Term(t => t.Field(f => f.DocumentId).Value(documentId))
+        )
+    );
+
+    if (!response.IsValid)
+    {
+        // Log evt. fejlinformation
+        throw new Exception($"Elasticsearch sletning fejlede: {response.ServerError?.Error?.Reason}");
+    }
+
+    return response.Deleted >= 0;
+}
+
+public async Task<bool> DeleteByCaseIdAsync(string caseId)
+{
+    if (string.IsNullOrWhiteSpace(caseId))
+        throw new ArgumentException("CaseId må ikke være tomt.", nameof(caseId));
+
+    var response = await _client.DeleteByQueryAsync<SentenceEntry>(d => d
+        .Index(ElasticIndex.PdfWords.ToString().ToLower())
+        .Query(q => q
+            .Term(t => t.Field(f => f.CaseId).Value(caseId))
+        )
+    );
+
+    if (!response.IsValid)
+    {
+        // Log eller kast en fejl med detaljer
+        throw new Exception($"Elasticsearch sletning fejlede: {response.ServerError?.Error?.Reason}");
+    }
+
+    return response.Deleted >= 0;
+}
+
+public async Task<bool> DeleteByAttachmentIdAsync(string attachmentId)
+{
+    if (string.IsNullOrWhiteSpace(attachmentId))
+        throw new ArgumentException("AttachmentId må ikke være tomt.", nameof(attachmentId));
+
+    var response = await _client.DeleteByQueryAsync<SentenceEntry>(d => d
+        .Index(ElasticIndex.PdfWords.ToString().ToLower())
+        .Query(q => q
+            .Term(t => t.Field(f => f.AttachmentId).Value(attachmentId))
+        )
+    );
+
+    return response.IsValid && response.Deleted >= 0;
+}
 
     
     //re inits all indexes i elastic container
